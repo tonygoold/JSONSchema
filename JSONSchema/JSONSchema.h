@@ -123,9 +123,15 @@ typedef enum
              child:(id)child
            default:(id)defaultValue;
 
+- (id)copyWithOptions:(JSONSchemaOptions)options;
+- (id)copyWithOptions:(JSONSchemaOptions)options
+              default:(id)defaultValue;
+
 @end
 
 @interface JSONSchema : NSObject
+
+@property (nonatomic, readonly) JSONSchemaNode *rootNode;
 
 - (id)initWithRootNode:(JSONSchemaNode *)root;
 

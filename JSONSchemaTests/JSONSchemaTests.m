@@ -15,23 +15,9 @@
 
 @implementation JSONSchemaTests
 
-- (void)setUp
-{
-    [super setUp];
-    // Put setup code here; it will be run once, before the first test case.
-}
-
-- (void)tearDown
-{
-    // Put teardown code here; it will be run once, after the last test case.
-    [super tearDown];
-}
-
 - (void)assertError:(NSError *)error code:(NSInteger)code
 {
     XCTAssertNotNil(error, @"Error object was not set");
-    if (!error)
-        return;
     XCTAssertEqualObjects(error.domain, JSONSchemaErrorDomain, @"Error object does not have correct domain");
     XCTAssertEqual(error.code, code, @"Wrong type failure gave incorrect error code");
 }
@@ -204,8 +190,8 @@
     JSONSchema *schema = [[JSONSchema alloc] initWithRootNode:node];
     NSArray *array = @[ @0 ];
     NSError *error = nil;
-    XCTAssertFalse([schema checkObject:array error:&error], @"Array schema without a child should not match anything");
-    [self assertError:error code:JSONSchemaErrorInvalidSchemaNode];
+    XCTAssertFalse([schema checkObject:array error:&error], @"Array schema should not match child with wrong type.");
+    [self assertError:error code:JSONSchemaErrorWrongType];
 }
 
 - (void)testArrayNonEmptyFailure

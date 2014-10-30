@@ -126,7 +126,8 @@ NSString * const JSONSchemaErrorMissingEntryKey = @"JSONSchemaErrorMissingEntry"
 {
     return [self initWithType:type
                       options:0
-                        child:nil];
+                        child:nil
+                      default:nil];
 }
 
 - (id)initWithType:(JSONSchemaNodeType)type
@@ -134,7 +135,8 @@ NSString * const JSONSchemaErrorMissingEntryKey = @"JSONSchemaErrorMissingEntry"
 {
     return [self initWithType:type
                       options:options
-                        child:nil];
+                        child:nil
+                      default:nil];
 }
 - (id)initWithType:(JSONSchemaNodeType)type
            options:(JSONSchemaOptions)options
@@ -170,7 +172,9 @@ NSString * const JSONSchemaErrorMissingEntryKey = @"JSONSchemaErrorMissingEntry"
         if (type == JSONSchemaNodeDictionary)
         {
             if (!child)
+            {
                 child = @{};
+            }
 
             if (![child isKindOfClass:[NSDictionary class]])
             {
@@ -182,7 +186,9 @@ NSString * const JSONSchemaErrorMissingEntryKey = @"JSONSchemaErrorMissingEntry"
         else if (type == JSONSchemaNodeArray)
         {
             if (!child)
+            {
                 child = [JSONSchemaNode anyNode];
+            }
             _child = child;
         }
         else if (child)
@@ -194,23 +200,49 @@ NSString * const JSONSchemaErrorMissingEntryKey = @"JSONSchemaErrorMissingEntry"
     return self;
 }
 
+- (id)copyWithOptions:(JSONSchemaOptions)options
+{
+    return [self copyWithOptions:options default:nil];
+}
+
+- (id)copyWithOptions:(JSONSchemaOptions)options
+              default:(id)defaultValue
+{
+    return [[JSONSchemaNode alloc] initWithType:self.type
+                                        options:options
+                                          child:self.child
+                                        default:defaultValue];
+}
+
 @end
 
 // Note: This method will never return JSONSchemaNodeBoolean
 static inline JSONSchemaNodeType NodeTypeForObject(id object)
 {
     if ([object isKindOfClass:[NSDictionary class]])
+    {
         return JSONSchemaNodeDictionary;
+    }
     else if ([object isKindOfClass:[NSArray class]])
+    {
         return JSONSchemaNodeArray;
+    }
     else if ([object isKindOfClass:[NSString class]])
+    {
         return JSONSchemaNodeString;
+    }
     else if ([object isKindOfClass:[NSNumber class]])
+    {
         return JSONSchemaNodeNumber;
+    }
     else if ([object isKindOfClass:[NSNull class]])
+    {
         return JSONSchemaNodeNull;
+    }
     else
+    {
         return JSONSchemaNodeUnrecognized;
+    }
 }
 
 @interface JSONSchema ()
@@ -229,6 +261,8 @@ static inline JSONSchemaNodeType NodeTypeForObject(id object)
 @end
 
 @implementation JSONSchema
+
+@dynamic rootNode;
 
 static void SetError(NSError *__autoreleasing *error, NSInteger code, NSDictionary *userInfo)
 {
@@ -264,6 +298,11 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
     return self;
 }
 
+- (JSONSchemaNode *)rootNode
+{
+    return _root;
+}
+
 - (BOOL)checkObject:(id)object error:(NSError *__autoreleasing *)error
 {
     if (!_root)
@@ -282,9 +321,13 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
     if (!object || [object isKindOfClass:[NSNull class]])
     {
         if (node.options & JSONSchemaOptional)
+        {
             return YES;
+        }
         if (!object)
+        {
             object = [NSNull null];
+        }
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: object };
         SetError(error, JSONSchemaErrorWrongType, info);
@@ -317,10 +360,14 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
             code = JSONSchemaErrorInvalidSchemaNode;
     }
     if (valid)
+    {
         return YES;
+    }
 
     if (!object)
+    {
         object = [NSNull null];
+    }
     NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                             JSONSchemaErrorFailingObjectKey: object };
     SetError(error, code, info);
@@ -377,7 +424,9 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
         if (value)
         {
             if (![self checkObject:value withNode:childNode error:error])
+            {
                 return NO;
+            }
         }
         else if (!(childNode.options & JSONSchemaOptional))
         {
@@ -426,7 +475,9 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
     for (id object in array)
     {
         if (![self checkObject:object withNode:child error:error])
+        {
             return NO;
+        }
     }
     return YES;
 }
@@ -448,26 +499,40 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
     if (!object || [object isKindOfClass:[NSNull class]])
     {
         if (node.options & (JSONSchemaOptional | JSONSchemaUseDefaultOnError))
+        {
             return node.defaultValue;
+        }
 
         if (!object)
+        {
             object = [NSNull null];
+        }
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: object };
         SetError(error, JSONSchemaErrorWrongType, info);
-        return NO;
+        return nil;
     }
 
     if (node.type == JSONSchemaNodeDictionary)
+    {
         return [self transformDictionary:object withNode:node error:error];
+    }
     else if (node.type == JSONSchemaNodeArray)
+    {
         return [self transformArray:object withNode:node error:error];
+    }
     else if ([self checkObject:object withNode:node error:error])
+    {
         return object;
+    }
     else if (node.options & JSONSchemaUseDefaultOnError)
+    {
         return node.defaultValue;
+    }
     else
+    {
         return nil;
+    }
 }
 
 - (NSDictionary *)transformDictionary:(NSDictionary *)dictionary
@@ -477,7 +542,9 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
     if (![dictionary isKindOfClass:[NSDictionary class]])
     {
         if (node.options & JSONSchemaUseDefaultOnError)
+        {
             return node.defaultValue;
+        }
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: dictionary };
         SetError(error, JSONSchemaErrorWrongType, info);
@@ -503,7 +570,7 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: dictionary };
         SetError(error, JSONSchemaErrorUnspecifiedChild, info);
-        return NO;
+        return nil;
     }
 
     NSMutableDictionary *result = [NSMutableDictionary dictionaryWithCapacity:[dictionary count]];
@@ -533,13 +600,15 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
         {
             // Only missing or NSNull counts as optional
             if (!originalValue || [originalValue isKindOfClass:[NSNull class]])
+            {
                 continue;
+            }
         }
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: dictionary,
                                 JSONSchemaErrorMissingEntryKey: key };
         SetError(error, JSONSchemaErrorMissingKey, info);
-        return NO;
+        return nil;
     }
     return result;
 }
@@ -551,7 +620,9 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
     if (![array isKindOfClass:[NSArray class]])
     {
         if (node.options & JSONSchemaUseDefaultOnError)
+        {
             return node.defaultValue;
+        }
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: array };
         SetError(error, JSONSchemaErrorWrongType, info);
@@ -565,7 +636,7 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
                                 JSONSchemaErrorFailingObjectKey: array };
         NSInteger code = child ? JSONSchemaErrorInvalidSchemaNode : JSONSchemaErrorUnspecifiedChild;
         SetError(error, code, info);
-        return NO;
+        return nil;
     }
 
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:[array count]];
@@ -586,7 +657,8 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: array };
         SetError(error, JSONSchemaErrorEmptyArray, info);
-        return nil;
+
+        result = (node.options & JSONSchemaUseDefaultOnError) ? node.defaultValue : nil;
     }
     return result;
 }
@@ -616,10 +688,7 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
                     failed = YES;
                 }
             }];
-            if (failed)
-                return nil;
-            else
-                return [[JSONSchemaNode alloc] initWithType:type options:0 child:mapped];
+            return failed ? nil : [[JSONSchemaNode alloc] initWithType:type options:0 child:mapped];
         }
         case JSONSchemaNodeArray:
         {
@@ -647,8 +716,12 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
             }
             JSONSchemaNode *child = [self nodeForObject:[array lastObject] error:error];
             if (!child)
+            {
                 return nil;
-            return [[JSONSchemaNode alloc] initWithType:JSONSchemaNodeArray options:0 child:child];
+            }
+            return [[JSONSchemaNode alloc] initWithType:JSONSchemaNodeArray
+                                                options:0
+                                                  child:child];
         }
         case JSONSchemaNodeString:
         case JSONSchemaNodeNumber:
