@@ -411,8 +411,8 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
 
     for (id key in [child allKeys])
     {
-        JSONSchemaNode *childNode = child[key];
-        if (![childNode isKindOfClass:[JSONSchemaNode class]])
+        JSONSchemaNode *childNode = [JSONSchema nodeForObject:child[key] error:nil];
+        if (!childNode)
         {
             NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                     JSONSchemaErrorFailingObjectKey: dictionary };
@@ -454,8 +454,8 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
         return NO;
     }
 
-    JSONSchemaNode *child = node.child;
-    if (![child isKindOfClass:[JSONSchemaNode class]])
+    JSONSchemaNode *child = [JSONSchema nodeForObject:node.child error:nil];
+    if (!child)
     {
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: array };
@@ -576,8 +576,8 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
     NSMutableDictionary *result = [NSMutableDictionary dictionaryWithCapacity:[dictionary count]];
     for (id key in [child allKeys])
     {
-        JSONSchemaNode *childNode = child[key];
-        if (![childNode isKindOfClass:[JSONSchemaNode class]])
+        JSONSchemaNode *childNode = [JSONSchema nodeForObject:child[key] error:nil];
+        if (!childNode)
         {
             NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                     JSONSchemaErrorFailingObjectKey: dictionary };
@@ -629,8 +629,8 @@ static NSSet *UnspecifiedKeySet(NSDictionary *dict, JSONSchemaNode *node)
         return nil;
     }
 
-    JSONSchemaNode *child = node.child;
-    if (![child isKindOfClass:[JSONSchemaNode class]])
+    JSONSchemaNode *child = [JSONSchema nodeForObject:node.child error:nil];
+    if (!child)
     {
         NSDictionary *info = @{ JSONSchemaErrorSchemaNodeKey: node,
                                 JSONSchemaErrorFailingObjectKey: array };
